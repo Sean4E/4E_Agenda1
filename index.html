@@ -1,0 +1,3366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4E Agenda Builder</title>
+    <!-- Add jsPDF library for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f7f9fc;
+        }
+        
+        h1, h2 {
+            color: #2c3e50;
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+        
+        .logo-container {
+            flex-shrink: 0;
+        }
+        
+        #company-logo {
+            max-height: 70px;
+            max-width: 180px;
+        }
+        
+        .container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .form-section, .agenda-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-section {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .agenda-section {
+            flex: 2;
+            min-width: 400px;
+            height: 1400px;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 20px 0 20px;
+        }
+        
+        /* Tab styling */
+        .days-tabs {
+            display: flex;
+            padding: 0 20px;
+            margin: 0 -20px;
+            border-bottom: 1px solid #ddd;
+            background-color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 8px 16px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            margin-right: 4px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            position: relative;
+            top: 1px;
+        }
+        
+        .tab.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
+            border-bottom: 1px solid #3498db;
+        }
+        
+        .tab-badge {
+            background-color: rgba(0, 0, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+        
+        .tab.active .tab-badge {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .add-day-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            padding: 8px 12px;
+            background-color: #eaf2f8;
+            border: 1px dashed #3498db;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 4px;
+        }
+        
+        .add-day-btn:hover {
+            background-color: #d6eaf8;
+        }
+        
+        .agenda-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding-bottom: 20px;
+            position: relative;
+        }
+        
+        #agenda-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 0 5px 0 0;
+            margin-top: 15px;
+        }
+        
+        /* Scrollbar styling */
+        #agenda-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #agenda-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        #agenda-container::-webkit-scrollbar-thumb {
+            background: #c1d1e0;
+            border-radius: 4px;
+        }
+        
+        #agenda-container::-webkit-scrollbar-thumb:hover {
+            background: #a8bfd3;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .date-input-wrapper {
+            position: relative;
+        }
+        
+        .date-tbc {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #777;
+            pointer-events: none;
+            background: white;
+            padding: 0 5px;
+        }
+        
+        .date-tbc.hidden {
+            display: none;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .session-block {
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: #fff;
+            border-left: 5px solid #3498db;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 4px;
+            cursor: move;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .session-block:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .session-block h3 {
+            margin-top: 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .time-badge {
+            background-color: #eaf2f8;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: normal;
+        }
+        
+        .session-block p {
+            margin-bottom: 5px;
+        }
+        
+        .empty-day-message {
+            text-align: center;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            color: #95a5a6;
+            border: 1px dashed #ddd;
+            margin-bottom: 10px;
+        }
+        
+        .session-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .session-actions button {
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+        
+        .duplicate-btn {
+            background-color: #9b59b6;
+        }
+        
+        .duplicate-btn:hover {
+            background-color: #8e44ad;
+        }
+        
+        .delete-btn {
+            background-color: #e74c3c;
+        }
+        
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+        
+        .summary {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #eaf2f8;
+            border-radius: 4px;
+        }
+        
+        .export-options {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ccc;
+            margin-bottom: 15px;
+        }
+        
+        .additional-info {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ccc;
+        }
+        
+        .export-options button {
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        
+        .export-note {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 8px;
+            font-style: italic;
+        }
+        
+        #export-pdf {
+            background-color: #e74c3c;
+        }
+        
+        #export-pdf:hover {
+            background-color: #c0392b;
+        }
+        
+        #export-excel {
+            background-color: #16a085;
+        }
+        
+        #export-excel:hover {
+            background-color: #1abc9c;
+        }
+        
+        .dragging {
+            opacity: 0.7;
+            transform: scale(0.95);
+        }
+        
+        .dropzone {
+            min-height: 100px;
+            border: 2px dashed #ccc;
+            border-radius: 4px;
+            margin-top: 10px;
+            padding: 10px;
+        }
+        
+        .empty-message {
+            text-align: center;
+            color: #95a5a6;
+            padding: 20px;
+        }
+        
+        .workshop-title-container {
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .workshop-title-container .form-group:first-child {
+            grid-column: 1 / -1;
+        }
+        
+        .workshop-title-container label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .workshop-title-container input {
+            width: 100%;
+            font-size: 16px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 5px;
+        }
+        
+        .checkbox-group label {
+            margin-bottom: 0;
+            font-weight: normal;
+        }
+        
+        .session-block.break-session {
+            border-left-color: #e67e22;
+            background-color: #fef9e7;
+        }
+        
+        .session-block.break-session h3 {
+            color: #d35400;
+        }
+        
+        .day-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .confirm-delete-day {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .confirm-delete-dialog {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .confirm-delete-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        /* Day selector dropdown for session blocks */
+        .day-target-selector {
+            position: absolute;
+            z-index: 100;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            border-radius: 4px;
+            padding: 10px;
+            min-width: 150px;
+        }
+        
+        .day-target-selector p {
+            margin: 0 0 10px 0;
+            font-weight: bold;
+        }
+        
+        .day-option {
+            display: block;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-bottom: 5px;
+        }
+        
+        .day-option:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .day-option.active {
+            background-color: #e1f0fa;
+        }
+        
+        /* Session templates area */
+        .templates-section {
+            margin-top: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px dashed #bdc3c7;
+        }
+        
+        .templates-section h3 {
+            margin-top: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .templates-container {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        
+        /* Mini session block template */
+        .session-template {
+            padding: 10px;
+            background-color: #fff;
+            border-left: 5px solid #3498db;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 4px;
+            cursor: move;
+            transition: transform 0.2s, box-shadow 0.2s;
+            max-width: 250px;
+            margin-bottom: 10px;
+        }
+        
+        .session-template:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .session-template.break-session {
+            border-left-color: #e67e22;
+            background-color: #fef9e7;
+        }
+
+        /* Canvas view toggle button */
+        #toggle-canvas-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+        }
+
+        /* Canvas View Styles */
+        .main-view {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .main-view.hidden {
+            display: none;
+        }
+        
+        .canvas-view {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #f7f9fc;
+            z-index: 2000;
+        }
+        
+        .canvas-view.visible {
+            display: block;
+        }
+        
+        .toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1000;
+        }
+        
+        .toolbar h1 {
+            margin: 0;
+            font-size: 18px;
+            margin-right: 20px;
+        }
+        
+        .toolbar-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .zoom-controls span {
+            min-width: 50px;
+            text-align: center;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 50px;
+            left: 0;
+            bottom: 0;
+            width: 250px;
+            background-color: #fff;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            z-index: 900;
+            padding: 15px;
+        }
+        
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .sidebar-header h2 {
+            margin: 0;
+            font-size: 16px;
+        }
+        
+        .day-navigator {
+            margin-bottom: 15px;
+        }
+        
+        .day-selector {
+            width: 100%;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .canvas-form-section {
+            margin: 15px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .canvas-form-section h3 {
+            font-size: 14px;
+            margin-top: 0;
+            margin-bottom: 12px;
+        }
+        
+        .canvas-form-section .form-group {
+            margin-bottom: 10px;
+        }
+        
+        .canvas-form-section label {
+            font-size: 13px;
+            margin-bottom: 3px;
+        }
+        
+        .canvas-form-section input,
+        .canvas-form-section textarea,
+        .canvas-form-section select {
+            font-size: 13px;
+            padding: 6px;
+        }
+        
+        .full-width-btn {
+            width: 100%;
+            margin: 8px 0 0 0;
+        }
+        
+        .canvas-template-section {
+            margin-top: 15px;
+        }
+        
+        .canvas-template-section h3 {
+            font-size: 14px;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        
+        .template-item {
+            background-color: white;
+            border-left: 4px solid #3498db;
+            padding: 8px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 3px;
+            cursor: grab;
+            font-size: 13px;
+            position: relative;
+            /* Make template items draggable */
+            -webkit-user-drag: element;
+            user-select: none;
+            /* Ensure they stay above the canvas */
+            z-index: 901;
+        }
+        
+        .template-item.break-template {
+            border-left-color: #e67e22;
+            background-color: #fef9e7;
+        }
+        
+        .template-title {
+            font-weight: 500;
+            margin-bottom: 2px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+        
+        .add-to-canvas-btn {
+            position: absolute;
+            right: 0;
+            top: 0;
+            padding: 2px 5px;
+            font-size: 10px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .duration-badge {
+            font-size: 11px;
+            background-color: #eaf2f8;
+            padding: 1px 5px;
+            border-radius: 10px;
+            font-weight: normal;
+            margin-right: 25px;
+        }
+        
+        .canvas-container {
+            position: fixed;
+            top: 50px;
+            left: 250px;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            background-image: 
+                linear-gradient(rgba(150, 150, 150, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(150, 150, 150, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: 0 0;
+        }
+        
+        .canvas {
+            position: absolute;
+            width: 8000px;
+            height: 6000px;
+            transform-origin: 0 0;
+            background-color: transparent;
+        }
+        
+        .minimap {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 150px;
+            height: 100px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .minimap-view {
+            position: absolute;
+            border: 2px solid #3498db;
+            background-color: rgba(52, 152, 219, 0.1);
+            pointer-events: none;
+        }
+        
+        .day-column {
+            position: absolute;
+            width: 800px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            top: 20px;
+            bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            overflow-y: auto;
+        }
+        
+        .day-column h2 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background-color: rgba(255, 255, 255, 0.9);
+            z-index: 10;
+        }
+        
+        .day-column h2 .stats {
+            font-size: 14px;
+            font-weight: normal;
+            color: #666;
+        }
+        
+        /* Day column delete button */
+        .day-delete-btn {
+            cursor: pointer;
+            color: #e74c3c;
+            font-size: 18px;
+            font-weight: bold;
+            margin-left: 10px;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        
+        .day-delete-btn:hover {
+            opacity: 1;
+        }
+        
+        .session-card {
+            background-color: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            padding: 12px;
+            cursor: grab;
+            border-left: 5px solid #3498db;
+            position: relative;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .session-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        
+        .session-card.break-session {
+            border-left-color: #e67e22;
+            background-color: #fef9e7;
+        }
+        
+        .session-card h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-controls {
+            margin-top: 8px;
+            display: flex;
+            justify-content: space-between;
+            gap: 5px;
+            align-items: center;
+        }
+        
+        .card-controls button {
+            padding: 3px 6px;
+            font-size: 11px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            color: white;
+        }
+        
+        .card-controls .edit-btn {
+            background-color: #3498db;
+        }
+        
+        .card-controls .duplicate-btn {
+            background-color: #9b59b6;
+        }
+        
+        .card-controls .delete-btn {
+            background-color: #e74c3c;
+        }
+        
+        /* Canvas toggle button */
+        .canvas-toggle {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* Canvas export button */
+        .canvas-export-controls {
+            margin-left: auto;
+            margin-right: 15px;
+        }
+        
+        /* Export checkbox in main view */
+        .include-canvas-checkbox {
+            margin-top: 10px;
+        }
+        
+        /* Print styles for canvas export */
+        @media print {
+            .toolbar, .sidebar, .minimap, .canvas-toggle {
+                display: none !important;
+            }
+            
+            .canvas-container {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                overflow: visible;
+                background: none;
+            }
+            
+            .canvas {
+                transform: none !important;
+                width: auto !important;
+                height: auto !important;
+            }
+            
+            .day-column {
+                position: relative;
+                display: block;
+                page-break-inside: avoid;
+                width: 100%;
+                margin-bottom: 20px;
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-view" id="main-view">
+        <div class="header">
+            <div class="logo-container">
+                <img src="4ELogo.png" alt="Company Logo" id="company-logo">
+            </div>
+            <h1>4E Agenda Builder</h1>
+        </div>
+        
+        <div class="workshop-title-container">
+            <div class="form-group">
+                <label for="workshop-title">Title:</label>
+                <input type="text" id="workshop-title" placeholder="Enter Workshop Title" value="New Workshop">
+            </div>
+            
+            <div class="form-group">
+                <label for="workshop-date">Date:</label>
+                <div class="date-input-wrapper">
+                    <input type="date" id="workshop-date">
+                    <span id="date-tbc" class="date-tbc">TBC</span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="client-name">Client:</label>
+                <input type="text" id="client-name" placeholder="Enter Client Name">
+            </div>
+            
+            <div class="form-group">
+                <label for="location">Location:</label>
+                <input type="text" id="location" placeholder="Enter Location">
+            </div>
+        </div>
+        
+        <div class="container">
+            <section class="form-section">
+                <h2>Add New Session</h2>
+                <form id="session-form">
+                    <div class="form-group">
+                        <label for="session-title">Session Title</label>
+                        <input type="text" id="session-title" required placeholder="e.g. Welcome and Introduction">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="session-description">Description (optional)</label>
+                        <textarea id="session-description" rows="3" placeholder="Brief description of the session"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="session-duration">Duration (minutes)</label>
+                        <input type="number" id="session-duration" min="5" step="5" value="30" required>
+                    </div>
+                    
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="is-break" name="is-break">
+                        <label for="is-break">This is a break (won't count as a session)</label>
+                    </div>
+                    
+                    <button type="submit">Add Session</button>
+                </form>
+                
+                <div class="summary">
+                    <h3>Agenda Summary</h3>
+                    <p>Total Sessions: <span id="total-sessions">0</span></p>
+                    <p>Total Duration: <span id="total-duration">0 minutes</span></p>
+                    <div class="button-group">
+                        <button id="clear-all">Clear All Sessions</button>
+                        <button id="save-agenda">Save Agenda</button>
+                        <button id="load-agenda">Load Agenda</button>
+                    </div>
+                    
+                    <div class="export-options">
+                        <h3>Export Options</h3>
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="include-details" name="include-details" checked>
+                            <label for="include-details">Include session details in exports</label>
+                        </div>
+                        <div class="form-group checkbox-group include-canvas-checkbox">
+                            <input type="checkbox" id="include-canvas" name="include-canvas" checked>
+                            <label for="include-canvas">Include canvas view in PDF export</label>
+                        </div>
+                        <div class="button-group">
+                            <button id="export-pdf">Export as PDF</button>
+                            <button id="export-excel">Export as Excel (XLS)</button>
+                        </div>
+                        <p class="export-note">Note: When opening Excel files, you may need to click "Yes" to trust the file.</p>
+                    </div>
+                    
+                    <div class="additional-info">
+                        <h3>Session Details</h3>
+                        <div class="form-group">
+                            <label for="learning-outcomes">Learning Outcomes:</label>
+                            <textarea id="learning-outcomes" rows="3" placeholder="What participants will learn from this workshop"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="workshop-outputs">Outputs:</label>
+                            <textarea id="workshop-outputs" rows="3" placeholder="What will be produced during this workshop"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section class="agenda-section">
+                <h2>Agenda</h2>
+                
+                <!-- Day tabs will be added here -->
+                <div class="days-tabs" id="days-tabs">
+                    <!-- Tabs will be generated dynamically -->
+                </div>
+                
+                <div class="agenda-content">
+                    <div id="agenda-container" class="dropzone">
+                        <!-- Sessions for the current day will appear here -->
+                    </div>
+                </div>
+                
+                <!-- Reusable templates section -->
+                <div class="templates-section">
+                    <h3>
+                        Reusable Session Templates
+                        <button id="clear-templates" class="delete-btn" style="padding: 3px 8px; font-size: 12px;">Clear All</button>
+                    </h3>
+                    <p>Drag these templates to any day to create a new session</p>
+                    <div id="templates-container" class="templates-container">
+                        <!-- Template blocks will appear here -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Canvas View (initially hidden) -->
+    <div class="canvas-view" id="canvas-view">
+        <div class="toolbar">
+            <h1 id="canvas-title">Workshop Canvas View</h1>
+            <div class="toolbar-controls">
+                <button id="add-canvas-day-btn">Add Day</button>
+                <div class="zoom-controls">
+                    <button id="zoom-out-btn">−</button>
+                    <span id="zoom-level">100%</span>
+                    <button id="zoom-in-btn">+</button>
+                    <button id="reset-zoom-btn">Reset</button>
+                </div>
+                <div class="canvas-export-controls">
+                    <button id="export-canvas-pdf">Export Canvas as PDF</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Navigator</h2>
+            </div>
+            
+            <div class="day-navigator">
+                <label for="day-select">Jump to Day:</label>
+                <select id="day-select" class="day-selector">
+                    <!-- Options will be generated dynamically -->
+                </select>
+            </div>
+            
+            <!-- Add session form in canvas view -->
+            <div class="canvas-form-section">
+                <h3>Add Session</h3>
+                <form id="canvas-session-form">
+                    <div class="form-group">
+                        <label for="canvas-session-title">Title</label>
+                        <input type="text" id="canvas-session-title" required placeholder="Session title">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="canvas-session-description">Description</label>
+                        <textarea id="canvas-session-description" rows="2" placeholder="Brief description"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="canvas-session-duration">Duration (min)</label>
+                        <input type="number" id="canvas-session-duration" min="5" step="5" value="30" required>
+                    </div>
+                    
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="canvas-is-break" name="canvas-is-break">
+                        <label for="canvas-is-break">This is a break</label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="canvas-session-day">Add to Day</label>
+                        <select id="canvas-session-day">
+                            <!-- Options will be generated dynamically -->
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="full-width-btn">Add Session</button>
+                </form>
+            </div>
+            
+            <div class="canvas-template-section">
+                <h3>Reusable Templates</h3>
+                <div id="canvas-templates-container">
+                    <!-- Templates will be generated dynamically -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="canvas-container" id="canvas-container">
+            <div class="canvas" id="canvas">
+                <!-- Day columns will be generated dynamically -->
+            </div>
+        </div>
+        
+        <div class="minimap">
+            <div class="minimap-view"></div>
+        </div>
+        
+        <!-- Toggle button to return to standard view -->
+        <button class="canvas-toggle" id="exit-canvas-btn">Exit Canvas View</button>
+    </div>
+
+    <!-- Confirm delete day modal (hidden by default) -->
+    <div id="confirm-delete-day" class="confirm-delete-day" style="display:none;">
+        <div class="confirm-delete-dialog">
+            <h3>Delete Day</h3>
+            <p>Are you sure you want to delete Day <span id="day-to-delete">1</span>?</p>
+            <p>All sessions from this day will be permanently removed.</p>
+            <div class="confirm-delete-actions">
+                <button id="cancel-delete-day">Cancel</button>
+                <button id="confirm-delete-day-btn" class="delete-btn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Day selection modal for drag and drop (hidden by default) -->
+    <div id="day-selector" class="day-target-selector" style="display:none;">
+        <p>Select target day:</p>
+        <div id="day-options">
+            <!-- Day options will be dynamically added here -->
+        </div>
+    </div>
+
+    <!-- Canvas view toggle button -->
+    <button id="toggle-canvas-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+            <line x1="15" y1="3" x2="15" y2="21"></line>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="3" y1="15" x2="21" y2="15"></line>
+        </svg>
+        Canvas View
+    </button>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Main view elements
+            const sessionForm = document.getElementById('session-form');
+            const agendaContainer = document.getElementById('agenda-container');
+            const daysTabsContainer = document.getElementById('days-tabs');
+            const totalSessionsElement = document.getElementById('total-sessions');
+            const totalDurationElement = document.getElementById('total-duration');
+            const clearAllButton = document.getElementById('clear-all');
+            const saveAgendaButton = document.getElementById('save-agenda');
+            const loadAgendaButton = document.getElementById('load-agenda');
+            const exportPdfButton = document.getElementById('export-pdf');
+            const exportExcelButton = document.getElementById('export-excel');
+            const workshopTitleInput = document.getElementById('workshop-title');
+            const workshopDateInput = document.getElementById('workshop-date');
+            const dateTbcElement = document.getElementById('date-tbc');
+            const clientNameInput = document.getElementById('client-name');
+            const locationInput = document.getElementById('location');
+            const learningOutcomesInput = document.getElementById('learning-outcomes');
+            const workshopOutputsInput = document.getElementById('workshop-outputs');
+            const includeDetailsCheckbox = document.getElementById('include-details');
+            const includeCanvasCheckbox = document.getElementById('include-canvas');
+            const companyLogo = document.getElementById('company-logo');
+            const confirmDeleteDayModal = document.getElementById('confirm-delete-day');
+            const dayToDeleteSpan = document.getElementById('day-to-delete');
+            const cancelDeleteDayBtn = document.getElementById('cancel-delete-day');
+            const confirmDeleteDayBtn = document.getElementById('confirm-delete-day-btn');
+            const templatesContainer = document.getElementById('templates-container');
+            const clearTemplatesBtn = document.getElementById('clear-templates');
+            const daySelector = document.getElementById('day-selector');
+            const dayOptions = document.getElementById('day-options');
+            const toggleCanvasBtn = document.getElementById('toggle-canvas-btn');
+            
+            // Canvas view elements
+            const mainView = document.getElementById('main-view');
+            const canvasView = document.getElementById('canvas-view');
+            const exitCanvasBtn = document.getElementById('exit-canvas-btn');
+            const canvasTitleElement = document.getElementById('canvas-title');
+            const daySelect = document.getElementById('day-select');
+            const canvasTemplatesContainer = document.getElementById('canvas-templates-container');
+            const canvas = document.getElementById('canvas');
+            const canvasContainer = document.getElementById('canvas-container');
+            const minimap = document.querySelector('.minimap');
+            const minimapView = document.querySelector('.minimap-view');
+            const zoomLevelDisplay = document.getElementById('zoom-level');
+            const zoomInBtn = document.getElementById('zoom-in-btn');
+            const zoomOutBtn = document.getElementById('zoom-out-btn');
+            const resetZoomBtn = document.getElementById('reset-zoom-btn');
+            const addCanvasDayBtn = document.getElementById('add-canvas-day-btn');
+            const canvasSessionForm = document.getElementById('canvas-session-form');
+            const canvasSessionDay = document.getElementById('canvas-session-day');
+            const canvasSessionTitle = document.getElementById('canvas-session-title');
+            const canvasSessionDescription = document.getElementById('canvas-session-description');
+            const canvasSessionDuration = document.getElementById('canvas-session-duration');
+            const canvasIsBreak = document.getElementById('canvas-is-break');
+            const exportCanvasPdfBtn = document.getElementById('export-canvas-pdf');
+            
+            // Global variables
+            let sessions = [];
+            let reusableSessions = new Set(); // Track which sessions are marked as reusable
+            let workshopTitle = "New Workshop";
+            let workshopDate = ""; // Empty string means TBC
+            let clientName = "";
+            let location = "";
+            let learningOutcomes = "";
+            let workshopOutputs = "";
+            let includeDetails = true;
+            let includeCanvas = true;
+            let editingSessionIndex = -1; // Track which session is being edited
+            let currentDay = 1; // The currently selected day tab
+            let dayToDelete = null; // Used for delete day confirmation
+            let totalDays = 1; // Total number of days in the workshop
+            let draggedSession = null; // Track which session is being dragged
+            let dragSourceIsTemplate = false; // Track if drag source is a template
+            
+            // Canvas view variables
+            let zoomLevel = 1;
+            let panX = 0;
+            let panY = 0;
+            let isPanning = false;
+            let startX, startY;
+            let canvasDraggedSession = null;
+            let canvasDraggedTemplate = null;
+            
+            // Format dates in DD/MM/YYYY format
+            function formatDate(date) {
+                if (!date) return '';
+                
+                // Handle date objects
+                if (date instanceof Date) {
+                    const day = date.getDate().toString().padStart(2, '0');
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const year = date.getFullYear();
+                    return `${day}/${month}/${year}`;
+                }
+                
+                // Handle date strings (assume in ISO format YYYY-MM-DD)
+                if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    const [year, month, day] = date.split('-');
+                    return `${day}/${month}/${year}`;
+                }
+                
+                return date; // Return as is if not recognizable
+            }
+            
+            // Format minutes to a readable time format (hours and minutes if ≥ 60 mins)
+            function formatDuration(minutes) {
+                if (minutes < 60) {
+                    return minutes + (minutes === 1 ? ' minute' : ' minutes');
+                } else {
+                    const hours = Math.floor(minutes / 60);
+                    const remainingMinutes = minutes % 60;
+                    
+                    let result = hours + (hours === 1 ? ' hour' : ' hours');
+                    if (remainingMinutes > 0) {
+                        result += ' ' + remainingMinutes + (remainingMinutes === 1 ? ' minute' : ' minutes');
+                    }
+                    return result;
+                }
+            }
+            
+            // Workshop date handling
+            workshopDateInput.addEventListener('change', function() {
+                workshopDate = workshopDateInput.value;
+                updateDateTbcVisibility();
+                saveToLocalStorage();
+            });
+            
+            function updateDateTbcVisibility() {
+                if (workshopDate && workshopDate.trim() !== '') {
+                    dateTbcElement.classList.add('hidden');
+                } else {
+                    dateTbcElement.classList.remove('hidden');
+                }
+            }
+            
+            // Workshop title and other metadata change events
+            workshopTitleInput.addEventListener('change', function() {
+                workshopTitle = workshopTitleInput.value;
+                canvasTitleElement.textContent = workshopTitle + " - Canvas View";
+                saveToLocalStorage();
+            });
+            
+            clientNameInput.addEventListener('change', function() {
+                clientName = clientNameInput.value;
+                saveToLocalStorage();
+            });
+            
+            locationInput.addEventListener('change', function() {
+                location = locationInput.value;
+                saveToLocalStorage();
+            });
+            
+            learningOutcomesInput.addEventListener('change', function() {
+                learningOutcomes = learningOutcomesInput.value;
+                saveToLocalStorage();
+            });
+            
+            workshopOutputsInput.addEventListener('change', function() {
+                workshopOutputs = workshopOutputsInput.value;
+                saveToLocalStorage();
+            });
+            
+            includeDetailsCheckbox.addEventListener('change', function() {
+                includeDetails = includeDetailsCheckbox.checked;
+                saveToLocalStorage();
+            });
+            
+            includeCanvasCheckbox.addEventListener('change', function() {
+                includeCanvas = includeCanvasCheckbox.checked;
+                saveToLocalStorage();
+            });
+            
+            // Initialize the day tabs
+            function initDayTabs() {
+                daysTabsContainer.innerHTML = '';
+                
+                // Create a tab for each day
+                for (let day = 1; day <= totalDays; day++) {
+                    const tabElement = document.createElement('div');
+                    tabElement.className = 'tab' + (day === currentDay ? ' active' : '');
+                    tabElement.dataset.day = day;
+                    
+                    // Count sessions for this day
+                    const daySessionsCount = sessions.filter(s => s.day === day && !s.isBreak).length;
+                    
+                    tabElement.innerHTML = `
+                        Day ${day}
+                        <span class="tab-badge">${daySessionsCount}</span>
+                        ${day > 1 ? '<span class="tab-close" data-day="' + day + '">&times;</span>' : ''}
+                    `;
+                    
+                    tabElement.addEventListener('click', function(e) {
+                        // Only handle click on the tab itself, not on the close button
+                        if (!e.target.classList.contains('tab-close')) {
+                            switchToDay(day);
+                        }
+                    });
+                    
+                    daysTabsContainer.appendChild(tabElement);
+                }
+                
+                // Add the "+ Day" button
+                const addDayButton = document.createElement('div');
+                addDayButton.className = 'add-day-btn';
+                addDayButton.textContent = '+';
+                addDayButton.addEventListener('click', addDay);
+                daysTabsContainer.appendChild(addDayButton);
+                
+                // Add event listeners for tab close buttons
+                const tabCloseButtons = document.querySelectorAll('.tab-close');
+                tabCloseButtons.forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation(); // Prevent triggering the tab's click event
+                        const day = parseInt(this.dataset.day, 10);
+                        promptDeleteDay(day);
+                    });
+                });
+                
+                // Update canvas view day selectors
+                updateDaySelectors();
+            }
+            
+            // Update both session form day selectors
+            function updateDaySelectors() {
+                // Update canvas navigation day selector
+                daySelect.innerHTML = '';
+                for (let day = 1; day <= totalDays; day++) {
+                    const option = document.createElement('option');
+                    option.value = day;
+                    option.textContent = `Day ${day}`;
+                    if (day === currentDay) {
+                        option.selected = true;
+                    }
+                    daySelect.appendChild(option);
+                }
+                
+                // Update canvas session form day selector
+                canvasSessionDay.innerHTML = '';
+                for (let day = 1; day <= totalDays; day++) {
+                    const option = document.createElement('option');
+                    option.value = day;
+                    option.textContent = `Day ${day}`;
+                    if (day === currentDay) {
+                        option.selected = true;
+                    }
+                    canvasSessionDay.appendChild(option);
+                }
+            }
+            
+            // Switch to a different day tab
+            function switchToDay(day) {
+                currentDay = day;
+                
+                // Update the active tab
+                const tabs = document.querySelectorAll('.tab');
+                tabs.forEach(tab => {
+                    if (parseInt(tab.dataset.day, 10) === day) {
+                        tab.classList.add('active');
+                    } else {
+                        tab.classList.remove('active');
+                    }
+                });
+                
+                // Re-render the agenda to show sessions for the current day
+                renderAgenda();
+                
+                // Update the day selectors
+                updateDaySelectors();
+                
+                // Save the current day to local storage
+                saveToLocalStorage();
+            }
+            
+            // Add a new day to the workshop
+            function addDay() {
+                totalDays++;
+                initDayTabs();
+                switchToDay(totalDays);
+                renderCanvasView(); // Update the canvas view with the new day
+                saveToLocalStorage();
+            }
+            
+            // Prompt to delete a day
+            function promptDeleteDay(day) {
+                dayToDelete = day;
+                dayToDeleteSpan.textContent = day;
+                confirmDeleteDayModal.style.display = 'flex';
+            }
+            
+            // Delete a day and reassign all higher day sessions
+            function deleteDay(day) {
+                // Remove all sessions for the specified day
+                sessions = sessions.filter(session => session.day !== day);
+                
+                // Decrement day number for all sessions with higher day numbers
+                sessions.forEach(session => {
+                    if (session.day > day) {
+                        session.day--;
+                    }
+                });
+                
+                totalDays--;
+                
+                // Adjust current day if needed
+                if (currentDay > totalDays) {
+                    currentDay = totalDays;
+                }
+                
+                // Update the UI
+                initDayTabs();
+                renderAgenda();
+                renderTemplates();
+                renderCanvasView(); // Update the canvas view
+                saveToLocalStorage();
+            }
+            
+            // Set up the delete day confirmation buttons
+            cancelDeleteDayBtn.addEventListener('click', function() {
+                confirmDeleteDayModal.style.display = 'none';
+                dayToDelete = null;
+            });
+            
+            confirmDeleteDayBtn.addEventListener('click', function() {
+                if (dayToDelete !== null) {
+                    deleteDay(dayToDelete);
+                    confirmDeleteDayModal.style.display = 'none';
+                    dayToDelete = null;
+                }
+            });
+            
+            // Toggle a session as reusable template
+            function toggleReusableSession(sessionId, makeReusable) {
+                // Find the session
+                const session = sessions.find(s => s.id === sessionId);
+                if (!session) return;
+                
+                if (makeReusable) {
+                    // Check if an identical session already exists in reusable items
+                    const isDuplicate = sessions.some(existingSession => {
+                        // Skip comparing with itself
+                        if (existingSession.id === sessionId) return false;
+                        
+                        // Check if this existing session is reusable
+                        if (!reusableSessions.has(existingSession.id)) return false;
+                        
+                        // Compare core properties
+                        return existingSession.title === session.title &&
+                               existingSession.description === session.description &&
+                               existingSession.duration === session.duration &&
+                               existingSession.isBreak === session.isBreak;
+                    });
+                    
+                    if (isDuplicate) {
+                        alert("A template with identical content already exists.");
+                        // Uncheck the checkbox without adding to reusable items
+                        const checkbox = document.querySelector(`#reusable-${sessionId}`);
+                        if (checkbox) checkbox.checked = false;
+                        return;
+                    }
+                    
+                    reusableSessions.add(sessionId);
+                } else {
+                    reusableSessions.delete(sessionId);
+                }
+                renderTemplates();
+                renderCanvasTemplates(); // Update canvas templates too
+                saveToLocalStorage();
+            }
+            
+            // Add new session from main form
+            sessionForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Save scroll position
+                const scrollPosition = agendaContainer.scrollTop;
+                
+                const titleInput = document.getElementById('session-title');
+                const descriptionInput = document.getElementById('session-description');
+                const durationInput = document.getElementById('session-duration');
+                const isBreakInput = document.getElementById('is-break');
+                
+                const session = {
+                    id: Date.now().toString(),
+                    title: titleInput.value,
+                    description: descriptionInput.value,
+                    duration: parseInt(durationInput.value, 10),
+                    isBreak: isBreakInput.checked,
+                    day: currentDay // Add to the currently selected day
+                };
+                
+                // Track if this is a new session or an edit
+                const isNewSession = editingSessionIndex < 0;
+                
+                if (!isNewSession) {
+                    // We are editing an existing session
+                    const oldId = sessions[editingSessionIndex].id;
+                    session.id = oldId; // Keep the same ID when editing
+                    
+                    // Check if this session was reusable
+                    const wasReusable = reusableSessions.has(oldId);
+                    
+                    sessions[editingSessionIndex] = session;
+                    editingSessionIndex = -1; // Reset editing state
+                    
+                    // Ensure reusable status is maintained
+                    if (wasReusable) {
+                        reusableSessions.add(session.id);
+                    }
+                } else {
+                    // Adding a new session
+                    sessions.push(session);
+                }
+                
+                // Reset form
+                titleInput.value = '';
+                descriptionInput.value = '';
+                durationInput.value = '30';
+                isBreakInput.checked = false;
+                
+                initDayTabs(); // Update tabs with new session counts
+                renderAgenda();
+                renderTemplates();
+                renderCanvasView(); // Update canvas view with new session
+                saveToLocalStorage();
+                
+                // Restore scroll position or go to bottom for new sessions
+                setTimeout(() => {
+                    if (isNewSession) {
+                        // For new sessions, scroll to the bottom to see them
+                        agendaContainer.scrollTop = agendaContainer.scrollHeight;
+                    } else {
+                        // For edited sessions, try to maintain scroll position
+                        agendaContainer.scrollTop = scrollPosition;
+                    }
+                }, 50);
+            });
+            
+            // Add session from canvas form
+            canvasSessionForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const title = canvasSessionTitle.value;
+                const description = canvasSessionDescription.value;
+                const duration = parseInt(canvasSessionDuration.value, 10);
+                const isBreak = canvasIsBreak.checked;
+                const day = parseInt(canvasSessionDay.value, 10);
+                
+                // Create new session
+                const session = {
+                    id: Date.now().toString(),
+                    title: title,
+                    description: description,
+                    duration: duration,
+                    isBreak: isBreak,
+                    day: day
+                };
+                
+                // Add to sessions array
+                sessions.push(session);
+                
+                // Reset form
+                canvasSessionTitle.value = '';
+                canvasSessionDescription.value = '';
+                canvasSessionDuration.value = '30';
+                canvasIsBreak.checked = false;
+                
+                // Update UI
+                initDayTabs();
+                renderCanvasView();
+                saveToLocalStorage();
+            });
+            
+            // Delete session
+            function deleteSession(sessionId) {
+                sessions = sessions.filter(session => session.id !== sessionId);
+                reusableSessions.delete(sessionId); // Remove from reusable set if it was there
+                
+                initDayTabs(); // Update tabs with new session counts
+                renderAgenda();
+                renderTemplates();
+                renderCanvasView(); // Update canvas view
+                renderCanvasTemplates(); // Update canvas templates
+                saveToLocalStorage();
+            }
+            
+            // Duplicate session
+            function duplicateSession(sessionId) {
+                const originalSession = sessions.find(s => s.id === sessionId);
+                
+                if (originalSession) {
+                    // Create a new session with the same properties but a new ID
+                    const newId = Date.now().toString();
+                    const duplicatedSession = {
+                        id: newId,
+                        title: originalSession.title + " (Copy)",
+                        description: originalSession.description,
+                        duration: originalSession.duration,
+                        isBreak: originalSession.isBreak,
+                        day: originalSession.day // Keep on the same day
+                    };
+                    
+                    // Add to the end of the sessions array
+                    sessions.push(duplicatedSession);
+                    
+                    // If original was reusable, make the copy reusable too
+                    if (reusableSessions.has(sessionId)) {
+                        reusableSessions.add(newId);
+                    }
+                    
+                    // Update the UI
+                    initDayTabs(); // Update tabs with new session counts
+                    renderAgenda();
+                    renderTemplates();
+                    renderCanvasView(); // Update canvas view
+                    saveToLocalStorage();
+                    
+                    // Scroll to the bottom to show the new session
+                    agendaContainer.scrollTop = agendaContainer.scrollHeight;
+                }
+            }
+            
+            // Clear all templates
+            clearTemplatesBtn.addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear all session templates?')) {
+                    reusableSessions.clear();
+                    renderTemplates();
+                    renderAgenda(); // Re-render to update checkboxes
+                    renderCanvasTemplates(); // Update canvas templates
+                    saveToLocalStorage();
+                }
+            });
+            
+            // Edit session
+            function editSession(sessionId) {
+                // Save current scroll position
+                const scrollPosition = agendaContainer.scrollTop;
+                
+                // Find the session and its index
+                const sessionIndex = sessions.findIndex(s => s.id === sessionId);
+                const session = sessions[sessionIndex];
+                
+                if (session) {
+                    // Switch to the correct day tab if needed
+                    if (session.day !== currentDay) {
+                        switchToDay(session.day);
+                    }
+                    
+                    // Store which session we're editing
+                    editingSessionIndex = sessionIndex;
+                    
+                    // Find the position of the session block to scroll to later
+                    const sessionBlock = document.querySelector(`.session-block[data-id="${sessionId}"]`);
+                    const sessionPosition = sessionBlock ? sessionBlock.offsetTop - 50 : null;
+                    
+                    // Fill the form with session data
+                    document.getElementById('session-title').value = session.title;
+                    document.getElementById('session-description').value = session.description || '';
+                    document.getElementById('session-duration').value = session.duration;
+                    document.getElementById('is-break').checked = session.isBreak || false;
+                    
+                    // Focus on title field
+                    document.getElementById('session-title').focus();
+                    
+                    // Restore scroll position so we stay in the same area
+                    setTimeout(() => {
+                        if (sessionPosition !== null) {
+                            // Scroll to position of edited session
+                            agendaContainer.scrollTop = sessionPosition;
+                        } else {
+                            // Restore original scroll position
+                            agendaContainer.scrollTop = scrollPosition;
+                        }
+                    }, 50);
+                }
+            }
+            
+            // Clear all sessions
+            clearAllButton.addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear all sessions from the entire workshop?')) {
+                    sessions = [];
+                    reusableSessions.clear();
+                    totalDays = 1;
+                    currentDay = 1;
+                    initDayTabs();
+                    renderAgenda();
+                    renderTemplates();
+                    renderCanvasView(); // Update canvas view
+                    renderCanvasTemplates(); // Update canvas templates
+                    saveToLocalStorage();
+                }
+            });
+            
+            // Save agenda to JSON file
+            saveAgendaButton.addEventListener('click', function() {
+                const workshopData = {
+                    title: workshopTitle,
+                    client: clientName,
+                    location: location,
+                    date: workshopDate,
+                    learningOutcomes: learningOutcomes,
+                    outputs: workshopOutputs,
+                    includeDetails: includeDetails,
+                    includeCanvas: includeCanvas,
+                    sessions: sessions,
+                    reusableSessions: Array.from(reusableSessions),
+                    totalDays: totalDays,
+                    currentDay: currentDay
+                };
+                const agendaData = JSON.stringify(workshopData, null, 2);
+                const blob = new Blob([agendaData], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'workshop-agenda.json';
+                a.click();
+                
+                URL.revokeObjectURL(url);
+            });
+            
+            // Load agenda from JSON file
+            loadAgendaButton.addEventListener('click', function() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                
+                input.addEventListener('change', function(event) {
+                    const file = event.target.files[0];
+                    
+                    if (file) {
+                        const reader = new FileReader();
+                        
+                        reader.onload = function(e) {
+                            try {
+                                const loadedData = JSON.parse(e.target.result);
+                                
+                                if (loadedData.sessions && Array.isArray(loadedData.sessions)) {
+                                    // Load the sessions first
+                                    sessions = loadedData.sessions;
+                                    
+                                    // Handle different formats of reusable sessions
+                                    if (loadedData.reusableSessions) {
+                                        if (Array.isArray(loadedData.reusableSessions)) {
+                                            // New format with reusableSessions array
+                                            reusableSessions = new Set(loadedData.reusableSessions);
+                                        } else if (typeof loadedData.reusableSessions === 'object') {
+                                            // Old format with templates array
+                                            reusableSessions = new Set();
+                                            // Convert linked session IDs to reusable
+                                            Object.values(loadedData.reusableSessions).forEach(id => {
+                                                if (sessions.some(s => s.id === id)) {
+                                                    reusableSessions.add(id);
+                                                }
+                                            });
+                                        }
+                                    } else if (loadedData.templates && Array.isArray(loadedData.templates)) {
+                                        // Old format with templates array
+                                        reusableSessions = new Set();
+                                        // Convert linked session IDs to reusable
+                                        loadedData.templates.forEach(template => {
+                                            if (template.linkedSessionId && 
+                                                sessions.some(s => s.id === template.linkedSessionId)) {
+                                                reusableSessions.add(template.linkedSessionId);
+                                            }
+                                        });
+                                    } else {
+                                        reusableSessions = new Set();
+                                    }
+                                    
+                                    // Load other workshop data
+                                    workshopTitle = loadedData.title || "New Workshop";
+                                    clientName = loadedData.client || "";
+                                    location = loadedData.location || "";
+                                    workshopDate = loadedData.date || "";
+                                    learningOutcomes = loadedData.learningOutcomes || "";
+                                    workshopOutputs = loadedData.outputs || "";
+                                    includeDetails = loadedData.includeDetails !== undefined ? 
+                                                    loadedData.includeDetails : true;
+                                    includeCanvas = loadedData.includeCanvas !== undefined ?
+                                                    loadedData.includeCanvas : true;
+                                    
+                                    // Multi-day workshop data
+                                    totalDays = loadedData.totalDays || 1;
+                                    currentDay = loadedData.currentDay || 1;
+                                    
+                                    // Ensure all sessions have a day property
+                                    sessions.forEach(session => {
+                                        if (!session.day) {
+                                            session.day = 1; // Default to day 1 for older data
+                                        }
+                                    });
+                                    
+                                    // Update UI
+                                    workshopTitleInput.value = workshopTitle;
+                                    clientNameInput.value = clientName;
+                                    locationInput.value = location;
+                                    workshopDateInput.value = workshopDate;
+                                    learningOutcomesInput.value = learningOutcomes;
+                                    workshopOutputsInput.value = workshopOutputs;
+                                    includeDetailsCheckbox.checked = includeDetails;
+                                    includeCanvasCheckbox.checked = includeCanvas;
+                                    canvasTitleElement.textContent = workshopTitle + " - Canvas View";
+                                    
+                                    updateDateTbcVisibility();
+                                    initDayTabs();
+                                    renderAgenda();
+                                    renderTemplates();
+                                    renderCanvasView(); // Update canvas view
+                                    renderCanvasTemplates(); // Update canvas templates
+                                    saveToLocalStorage();
+                                } else if (Array.isArray(loadedData)) {
+                                    // Old format with just sessions array
+                                    sessions = loadedData.map(session => ({
+                                        ...session,
+                                        day: 1 // Set all sessions to day 1
+                                    }));
+                                    reusableSessions = new Set();
+                                    totalDays = 1;
+                                    currentDay = 1;
+                                    
+                                    initDayTabs();
+                                    renderAgenda();
+                                    renderTemplates();
+                                    renderCanvasView(); // Update canvas view
+                                    renderCanvasTemplates(); // Update canvas templates
+                                    saveToLocalStorage();
+                                } else {
+                                    alert('Invalid agenda file format.');
+                                }
+                            } catch (error) {
+                                alert('Error loading file: ' + error.message);
+                            }
+                        };
+                        
+                        reader.readAsText(file);
+                    }
+                });
+                
+                input.click();
+            });
+            
+            // Render the agenda
+            function renderAgenda() {
+                // Clear current agenda
+                agendaContainer.innerHTML = '';
+                
+                // Get sessions for the current day
+                const daysSessions = sessions.filter(session => session.day === currentDay);
+                
+                if (daysSessions.length === 0) {
+                    const emptyDayMessage = document.createElement('div');
+                    emptyDayMessage.className = 'empty-day-message';
+                    emptyDayMessage.textContent = `No sessions added for Day ${currentDay} yet. Add a session using the form on the left or drag a template from below.`;
+                    agendaContainer.appendChild(emptyDayMessage);
+                    
+                    // Update summary
+                    updateWorkshopSummary();
+                    return;
+                }
+                
+                // Show day statistics
+                const daySessionsCount = daysSessions.filter(s => !s.isBreak).length;
+                const dayTotalDuration = daysSessions.reduce((total, s) => total + s.duration, 0);
+                
+                const dayStatsElement = document.createElement('div');
+                dayStatsElement.className = 'day-stats';
+                dayStatsElement.innerHTML = `
+                    <div>Sessions: ${daySessionsCount}</div>
+                    <div>Duration: ${formatDuration(dayTotalDuration)}</div>
+                `;
+                agendaContainer.appendChild(dayStatsElement);
+                
+                // Create session blocks
+                daysSessions.forEach((session, index) => {
+                    const sessionBlock = document.createElement('div');
+                    sessionBlock.className = session.isBreak ? 'session-block break-session' : 'session-block';
+                    sessionBlock.dataset.id = session.id;
+                    sessionBlock.draggable = true;
+                    
+                    const minutesText = session.duration === 1 ? 'minute' : 'minutes';
+                    const isReusable = reusableSessions.has(session.id);
+                    
+                    sessionBlock.innerHTML = `
+                        <h3>
+                            ${session.title}
+                            <span class="time-badge">${session.duration} ${minutesText}</span>
+                        </h3>
+                        <p>${session.description || '(No description provided)'}</p>
+                        <div class="session-actions">
+                            <div class="checkbox-group" style="margin-right: auto;">
+                                <input type="checkbox" id="reusable-${session.id}" class="make-reusable" 
+                                    data-id="${session.id}" ${isReusable ? 'checked' : ''}>
+                                <label for="reusable-${session.id}" style="font-size: 12px;">Make reusable</label>
+                            </div>
+                            <button class="edit-btn" data-id="${session.id}">Edit</button>
+                            <button class="duplicate-btn" data-id="${session.id}">Duplicate</button>
+                            <button class="delete-btn" data-id="${session.id}">Delete</button>
+                        </div>
+                    `;
+                    
+                    // Add drag and drop event listeners
+                    sessionBlock.addEventListener('dragstart', handleDragStart);
+                    sessionBlock.addEventListener('dragend', handleDragEnd);
+                    
+                    // Add event listener for the "Make reusable" checkbox
+                    const reusableCheckbox = sessionBlock.querySelector('.make-reusable');
+                    reusableCheckbox.addEventListener('change', function(e) {
+                        e.stopPropagation(); // Prevent event bubbling
+                        toggleReusableSession(session.id, this.checked);
+                    });
+                    
+                    // Add delete event listener
+                    const deleteButton = sessionBlock.querySelector('.delete-btn');
+                    deleteButton.addEventListener('click', function() {
+                        deleteSession(session.id);
+                    });
+                    
+                    // Add duplicate event listener
+                    const duplicateButton = sessionBlock.querySelector('.duplicate-btn');
+                    duplicateButton.addEventListener('click', function() {
+                        duplicateSession(session.id);
+                    });
+                    
+                    // Add edit event listener
+                    const editButton = sessionBlock.querySelector('.edit-btn');
+                    editButton.addEventListener('click', function() {
+                        editSession(session.id);
+                    });
+                    
+                    agendaContainer.appendChild(sessionBlock);
+                });
+                
+                // Update the overall summary
+                updateWorkshopSummary();
+            }
+            
+            // Render the templates section
+            function renderTemplates() {
+                // Clear current templates
+                templatesContainer.innerHTML = '';
+                
+                // Get all reusable sessions that exist in the sessions array
+                const templateSessions = sessions.filter(session => reusableSessions.has(session.id));
+                
+                if (templateSessions.length === 0) {
+                    const emptyMessage = document.createElement('div');
+                    emptyMessage.className = 'empty-message';
+                    emptyMessage.textContent = 'No templates saved yet. Check "Make reusable" on any session to add it here.';
+                    templatesContainer.appendChild(emptyMessage);
+                    return;
+                }
+                
+                // Create template blocks
+                templateSessions.forEach(session => {
+                    const templateBlock = document.createElement('div');
+                    templateBlock.className = session.isBreak ? 'session-template break-session' : 'session-template';
+                    templateBlock.dataset.id = session.id;
+                    templateBlock.draggable = true;
+                    
+                    const minutesText = session.duration === 1 ? 'min' : 'mins';
+                    
+                    templateBlock.innerHTML = `
+                        <h4 style="margin: 0 0 5px 0; position: relative;">
+                            ${session.title}
+                            <button class="add-to-agenda-btn" title="Add to current day" style="position: absolute; right: 0; top: 0; padding: 2px 5px; font-size: 10px; background-color: #3498db; color: white; border: none; border-radius: 3px; cursor: pointer;">
+                                <span style="font-size: 10px;">+</span>
+                            </button>
+                            <span style="float:right; font-size: 12px; font-weight: normal; margin-right: 25px;">${session.duration} ${minutesText}</span>
+                        </h4>
+                        <p style="font-size: 12px; margin: 0 0 5px 0; color: #666; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                            ${session.description || '(No description provided)'}
+                        </p>
+                    `;
+                    
+                    // Add drag and drop event listeners
+                    templateBlock.addEventListener('dragstart', handleTemplateDragStart);
+                    templateBlock.addEventListener('dragend', handleDragEnd);
+                    
+                    // Add button to add template directly to agenda
+                    const addToAgendaBtn = templateBlock.querySelector('.add-to-agenda-btn');
+                    addToAgendaBtn.addEventListener('click', function(e) {
+                        e.stopPropagation(); // Prevent other event handlers
+                        addSessionFromTemplate(session, currentDay);
+                    });
+                    
+                    templatesContainer.appendChild(templateBlock);
+                });
+            }
+            
+            // Render canvas templates
+            function renderCanvasTemplates() {
+                canvasTemplatesContainer.innerHTML = '';
+                
+                // Get all reusable sessions that exist in the sessions array
+                const templateSessions = sessions.filter(session => reusableSessions.has(session.id));
+                
+                if (templateSessions.length === 0) {
+                    const emptyMessage = document.createElement('div');
+                    emptyMessage.className = 'empty-message';
+                    emptyMessage.textContent = 'No templates saved yet. Check "Make reusable" on any session to add it here.';
+                    canvasTemplatesContainer.appendChild(emptyMessage);
+                    return;
+                }
+                
+                // Create template items
+                templateSessions.forEach(session => {
+                    const templateItem = document.createElement('div');
+                    templateItem.className = session.isBreak ? 'template-item break-template' : 'template-item';
+                    templateItem.draggable = true;
+                    templateItem.dataset.id = session.id;
+                    
+                    const minutesText = session.duration === 1 ? 'min' : 'mins';
+                    
+                    templateItem.innerHTML = `
+                        <div class="template-title">
+                            ${session.title}
+                            <button class="add-to-canvas-btn" title="Add to current day">+</button>
+                            <span class="duration-badge">${session.duration} ${minutesText}</span>
+                        </div>
+                        <div class="template-desc">${session.description || '(No description provided)'}</div>
+                    `;
+                    
+                    // Add drag and drop events
+                    templateItem.addEventListener('dragstart', function(e) {
+                        canvasDraggedTemplate = session;
+                        e.dataTransfer.setData('text/plain', 'template');
+                        e.dataTransfer.effectAllowed = 'copy';
+                    });
+                    
+                    templateItem.addEventListener('dragend', function() {
+                        canvasDraggedTemplate = null;
+                    });
+                    
+                    // Add button to add template directly to canvas
+                    const addBtn = templateItem.querySelector('.add-to-canvas-btn');
+                    addBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        
+                        // Get the selected day from the selector
+                        const selectedDay = parseInt(canvasSessionDay.value, 10);
+                        addSessionFromTemplate(session, selectedDay);
+                        renderCanvasView();
+                    });
+                    
+                    canvasTemplatesContainer.appendChild(templateItem);
+                });
+            }
+            
+            // Create a new session from a template
+            function addSessionFromTemplate(templateSession, targetDay) {
+                // Create a new session based on the template
+                const newSession = {
+                    id: Date.now().toString(),
+                    title: templateSession.title,
+                    description: templateSession.description,
+                    duration: templateSession.duration,
+                    isBreak: templateSession.isBreak,
+                    day: targetDay
+                };
+                
+                // Add to sessions array
+                sessions.push(newSession);
+                
+                // Update UI
+                initDayTabs();
+                renderAgenda();
+                renderCanvasView(); // Update canvas view
+                saveToLocalStorage();
+                
+                // Scroll to bottom of agenda to show new session
+                agendaContainer.scrollTop = agendaContainer.scrollHeight;
+                
+                return newSession;
+            }
+            
+            // Update workshop summary with total sessions and duration
+            function updateWorkshopSummary() {
+                const actualSessionCount = sessions.filter(session => !session.isBreak).length;
+                const totalDuration = sessions.reduce((total, session) => total + session.duration, 0);
+                totalSessionsElement.textContent = actualSessionCount;
+                totalDurationElement.textContent = formatDuration(totalDuration);
+            }
+            
+            // Save to localStorage
+            function saveToLocalStorage() {
+                const workshopData = {
+                    title: workshopTitle,
+                    client: clientName,
+                    location: location,
+                    date: workshopDate,
+                    learningOutcomes: learningOutcomes,
+                    outputs: workshopOutputs,
+                    includeDetails: includeDetails,
+                    includeCanvas: includeCanvas,
+                    sessions: sessions,
+                    reusableSessions: Array.from(reusableSessions),
+                    totalDays: totalDays,
+                    currentDay: currentDay
+                };
+                localStorage.setItem('workshopData', JSON.stringify(workshopData));
+            }
+            
+            // ---- Drag and Drop Functionality ----
+            
+            // Drag and drop functionality for session blocks
+            function handleDragStart(e) {
+                e.dataTransfer.setData('text/plain', e.target.dataset.id);
+                e.target.classList.add('dragging');
+                draggedSession = sessions.find(s => s.id === e.target.dataset.id);
+                dragSourceIsTemplate = false;
+                
+                // If user is holding Shift key, we'll show the day selector
+                if (e.shiftKey) {
+                    // Set up the day selector for cross-day drag and drop
+                    e.dataTransfer.effectAllowed = 'copyMove';
+                }
+            }
+            
+            // Drag and drop functionality for template blocks
+            function handleTemplateDragStart(e) {
+                e.dataTransfer.setData('text/plain', e.target.dataset.id);
+                e.dataTransfer.setData('isTemplate', 'true');
+                e.target.classList.add('dragging');
+                draggedSession = sessions.find(s => s.id === e.target.dataset.id);
+                dragSourceIsTemplate = true;
+                e.dataTransfer.effectAllowed = 'copy';
+            }
+            
+            function handleDragEnd(e) {
+                e.target.classList.remove('dragging');
+                hideAllDropdownMenus();
+            }
+            
+            // Hide all dropdown menus
+            function hideAllDropdownMenus() {
+                daySelector.style.display = 'none';
+            }
+            
+            // Show day selector dropdown near the cursor position
+            function showDaySelector(e) {
+                dayOptions.innerHTML = '';
+                
+                // Create an option for each day
+                for (let day = 1; day <= totalDays; day++) {
+                    const dayOption = document.createElement('div');
+                    dayOption.className = 'day-option' + (day === currentDay ? ' active' : '');
+                    dayOption.textContent = `Day ${day}`;
+                    dayOption.dataset.day = day;
+                    
+                    dayOption.addEventListener('click', function() {
+                        const selectedDay = parseInt(this.dataset.day, 10);
+                        if (draggedSession) {
+                            moveSessionToDay(draggedSession, selectedDay);
+                        }
+                        hideAllDropdownMenus();
+                    });
+                    
+                    dayOptions.appendChild(dayOption);
+                }
+                
+                // Position and show the day selector
+                daySelector.style.left = `${e.clientX}px`;
+                daySelector.style.top = `${e.clientY}px`;
+                daySelector.style.display = 'block';
+            }
+            
+            // Move a session to a different day
+            function moveSessionToDay(session, targetDay) {
+                if (dragSourceIsTemplate) {
+                    // Create a new session from the template
+                    addSessionFromTemplate(session, targetDay);
+                } else {
+                    // Update the existing session's day
+                    const sessionToUpdate = sessions.find(s => s.id === session.id);
+                    if (sessionToUpdate) {
+                        sessionToUpdate.day = targetDay;
+                        
+                        // Update the UI
+                        initDayTabs();
+                        if (targetDay === currentDay) {
+                            renderAgenda();
+                        }
+                        renderCanvasView(); // Update canvas view
+                        saveToLocalStorage();
+                    }
+                }
+            }
+            
+            agendaContainer.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                const afterElement = getDragAfterElement(agendaContainer, e.clientY);
+                const draggable = document.querySelector('.dragging');
+                
+                if (afterElement == null) {
+                    agendaContainer.appendChild(draggable);
+                } else {
+                    agendaContainer.insertBefore(draggable, afterElement);
+                }
+            });
+            
+            agendaContainer.addEventListener('drop', function(e) {
+                e.preventDefault();
+                const id = e.dataTransfer.getData('text/plain');
+                const isTemplate = e.dataTransfer.getData('isTemplate') === 'true';
+                
+                if (isTemplate) {
+                    // Creating a new session from a template
+                    const templateSession = sessions.find(s => s.id === id);
+                    if (templateSession) {
+                        addSessionFromTemplate(templateSession, currentDay);
+                    }
+                    // Make sure templates stay visible
+                    renderTemplates();
+                } else {
+                    // Moving an existing session
+                    const draggedSession = sessions.find(s => s.id === id);
+                    
+                    if (draggedSession) {
+                        // If this is a drag from another day, update the session's day
+                        if (draggedSession.day !== currentDay) {
+                            draggedSession.day = currentDay;
+                        }
+                        
+                        // Reorder sessions array based on new DOM order
+                        reorderSessionsBasedOnDOM();
+                        
+                        // Update UI
+                        initDayTabs();
+                        renderCanvasView(); // Update canvas view
+                        saveToLocalStorage();
+                    }
+                }
+            });
+            
+            // When Shift key is pressed during drag, show day selector
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Shift' && draggedSession && !dragSourceIsTemplate) {
+                    document.body.style.cursor = 'copy';
+                }
+            });
+            
+            document.addEventListener('keyup', function(e) {
+                if (e.key === 'Shift') {
+                    document.body.style.cursor = '';
+                }
+            });
+            
+            // Handle drag over the templates container
+            templatesContainer.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                // Only allow dropping if it's not a template being dragged
+                if (!dragSourceIsTemplate) {
+                    e.dataTransfer.dropEffect = 'copy';
+                }
+            });
+            
+            // Handle dropping a session onto the templates container
+            templatesContainer.addEventListener('drop', function(e) {
+                e.preventDefault();
+                // Only handle if it's not a template being dragged
+                if (!dragSourceIsTemplate) {
+                    const id = e.dataTransfer.getData('text/plain');
+                    const session = sessions.find(s => s.id === id);
+                    
+                    if (session) {
+                        // Mark as reusable
+                        reusableSessions.add(session.id);
+                        
+                        // Update checkbox status in the view
+                        const checkbox = document.querySelector(`#reusable-${session.id}`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                        }
+                        
+                        renderTemplates();
+                        renderCanvasTemplates(); // Update canvas templates
+                        saveToLocalStorage();
+                    }
+                }
+            });
+            
+            // Special handling for right-click on a session (to show day selector menu)
+            document.addEventListener('contextmenu', function(e) {
+                const sessionBlock = e.target.closest('.session-block');
+                if (sessionBlock) {
+                    e.preventDefault(); // Prevent default context menu
+                    
+                    // Get the session
+                    const sessionId = sessionBlock.dataset.id;
+                    draggedSession = sessions.find(s => s.id === sessionId);
+                    dragSourceIsTemplate = false;
+                    
+                    // Show the day selector
+                    showDaySelector(e);
+                }
+            });
+            
+            // Reorder sessions based on DOM order
+            function reorderSessionsBasedOnDOM() {
+                // Get the new order for the current day
+                const newOrder = [];
+                const sessionBlocks = document.querySelectorAll('.session-block');
+                
+                // Keep sessions from other days
+                const otherDaySessions = sessions.filter(s => s.day !== currentDay);
+                
+                // Add sessions in the new order for the current day
+                sessionBlocks.forEach(block => {
+                    const sessionId = block.dataset.id;
+                    const session = sessions.find(s => s.id === sessionId);
+                    
+                    if (session) {
+                        newOrder.push(session);
+                    }
+                });
+                
+                // Combine sessions from other days with reordered current day sessions
+                sessions = [...otherDaySessions, ...newOrder];
+            }
+            
+            function getDragAfterElement(container, y) {
+                const draggableElements = [...container.querySelectorAll('.session-block:not(.dragging)')];
+                
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = y - box.top - box.height / 2;
+                    
+                    if (offset < 0 && offset > closest.offset) {
+                        return { offset: offset, element: child };
+                    } else {
+                        return closest;
+                    }
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+            }
+            
+            // ---- Canvas View Functionality ----
+            
+            // Toggle canvas view
+            function toggleCanvasView() {
+                const isShowingCanvas = canvasView.classList.contains('visible');
+                
+                if (isShowingCanvas) {
+                    // Switch back to main view
+                    mainView.classList.remove('hidden');
+                    canvasView.classList.remove('visible');
+                } else {
+                    // Switch to canvas view
+                    mainView.classList.add('hidden');
+                    canvasView.classList.add('visible');
+                    renderCanvasView();
+                    renderCanvasTemplates();
+                    
+                    // Set canvas title
+                    canvasTitleElement.textContent = workshopTitle + " - Canvas View";
+                    
+                    // Reset zoom and pan
+                    zoomLevel = 1;
+                    panX = 0;
+                    panY = 0;
+                    updateTransform();
+                }
+            }
+            
+            // Canvas view toggle buttons
+            toggleCanvasBtn.addEventListener('click', toggleCanvasView);
+            exitCanvasBtn.addEventListener('click', toggleCanvasView);
+            
+            // Update the canvas transform
+            function updateTransform() {
+                canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
+                zoomLevelDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
+                updateMinimap();
+            }
+            
+            // Update the minimap view
+            function updateMinimap() {
+                // Calculate the visible viewport in the canvas coordinate system
+                const containerRect = canvasContainer.getBoundingClientRect();
+                const containerWidth = containerRect.width;
+                const containerHeight = containerRect.height;
+                const canvasWidth = canvas.offsetWidth * zoomLevel;
+                const canvasHeight = canvas.offsetHeight * zoomLevel;
+                
+                // Scale factors for the minimap
+                const minimapWidth = minimap.offsetWidth;
+                const minimapHeight = minimap.offsetHeight;
+                const scaleX = minimapWidth / canvasWidth;
+                const scaleY = minimapHeight / canvasHeight;
+                
+                // Calculate visible portion
+                const visibleLeft = -panX * scaleX;
+                const visibleTop = -panY * scaleY;
+                const visibleWidth = containerWidth * scaleX / zoomLevel;
+                const visibleHeight = containerHeight * scaleY / zoomLevel;
+                
+                // Update the minimap view rectangle
+                minimapView.style.left = `${visibleLeft}px`;
+                minimapView.style.top = `${visibleTop}px`;
+                minimapView.style.width = `${visibleWidth}px`;
+                minimapView.style.height = `${visibleHeight}px`;
+            }
+            
+            // Zoom in/out functions
+            zoomInBtn.addEventListener('click', function() {
+                zoomLevel = Math.min(zoomLevel * 1.2, 3);
+                updateTransform();
+            });
+            
+            zoomOutBtn.addEventListener('click', function() {
+                zoomLevel = Math.max(zoomLevel / 1.2, 0.3);
+                updateTransform();
+            });
+            
+            resetZoomBtn.addEventListener('click', function() {
+                zoomLevel = 1;
+                panX = 0;
+                panY = 0;
+                updateTransform();
+            });
+            
+            // Mouse wheel zoom
+            canvasContainer.addEventListener('wheel', function(e) {
+                e.preventDefault();
+                
+                // Get the pointer position relative to the canvas
+                const rect = canvasContainer.getBoundingClientRect();
+                const x = e.clientX - rect.left - panX;
+                const y = e.clientY - rect.top - panY;
+                
+                // Determine zoom direction
+                const scaleFactor = e.deltaY < 0 ? 1.1 : 0.9;
+                const newZoom = Math.max(0.3, Math.min(3, zoomLevel * scaleFactor));
+                
+                // Calculate new pan position to zoom towards mouse point
+                const factor = newZoom / zoomLevel;
+                panX = e.clientX - rect.left - (x * factor);
+                panY = e.clientY - rect.top - (y * factor);
+                zoomLevel = newZoom;
+                
+                updateTransform();
+            });
+            
+            // Panning with middle mouse button or space+drag
+            canvasContainer.addEventListener('mousedown', function(e) {
+                // Middle mouse button (button 1) or left mouse button with space key
+                if (e.button === 1 || (e.button === 0 && e.getModifierState("Space"))) {
+                    e.preventDefault();
+                    isPanning = true;
+                    startX = e.clientX - panX;
+                    startY = e.clientY - panY;
+                    canvasContainer.style.cursor = 'grabbing';
+                }
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (isPanning) {
+                    panX = e.clientX - startX;
+                    panY = e.clientY - startY;
+                    updateTransform();
+                }
+            });
+            
+            document.addEventListener('mouseup', function(e) {
+                if (isPanning) {
+                    isPanning = false;
+                    canvasContainer.style.cursor = 'default';
+                }
+            });
+            
+            // Jump to day in canvas view
+            daySelect.addEventListener('change', function() {
+                const day = parseInt(this.value, 10);
+                
+                // Calculate position to center the day column (830px per column)
+                const targetPanX = -((day - 1) * 830);
+                panX = targetPanX * zoomLevel;
+                panY = 0;
+                
+                updateTransform();
+            });
+            
+            // Add a new day in canvas view
+            addCanvasDayBtn.addEventListener('click', addDay);
+            
+            // Export canvas as PDF
+            exportCanvasPdfBtn.addEventListener('click', function() {
+                // For simplicity, we will use window.print() to create a PDF of the canvas view
+                // In a production environment, you would use html2canvas or similar library
+                if (confirm('This will open the print dialog to save the canvas as PDF. Continue?')) {
+                    // Apply print-friendly styles
+                    const originalStyles = canvas.style.cssText;
+                    
+                    // Set canvas to fit in print view
+                    canvas.style.transform = 'scale(1)';
+                    canvas.style.transformOrigin = 'top left';
+                    canvas.style.width = 'auto';
+                    canvas.style.height = 'auto';
+                    canvas.style.position = 'relative';
+                    
+                    // Print the canvas
+                    window.print();
+                    
+                    // Restore original styles
+                    canvas.style.cssText = originalStyles;
+                    updateTransform();
+                }
+            });
+            
+            // Render the canvas view with current data
+            function renderCanvasView() {
+                canvas.innerHTML = '';
+                
+                // Create a column for each day
+                for (let day = 1; day <= totalDays; day++) {
+                    const daySessions = sessions.filter(s => s.day === day);
+                    
+                    // Create day column
+                    const dayColumn = document.createElement('div');
+                    dayColumn.className = 'day-column';
+                    dayColumn.style.left = `${(day - 1) * 830 + 20}px`; // Position columns side by side
+                    
+                    // Count non-break sessions and total duration
+                    const daySessionsCount = daySessions.filter(s => !s.isBreak).length;
+                    const dayDuration = daySessions.reduce((total, s) => total + s.duration, 0);
+                    
+                    // Format duration for display
+                    let durationDisplay = formatDuration(dayDuration);
+                    
+                    dayColumn.innerHTML = `
+                        <h2>
+                            Day ${day}
+                            <span class="stats">${daySessionsCount} sessions | ${durationDisplay}</span>
+                            ${day > 1 ? '<span class="day-delete-btn" data-day="' + day + '">&times;</span>' : ''}
+                        </h2>
+                    `;
+                    
+                    // Add delete button event listener
+                    const deleteBtn = dayColumn.querySelector('.day-delete-btn');
+                    if (deleteBtn) {
+                        deleteBtn.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            const dayToRemove = parseInt(this.dataset.day, 10);
+                            if (confirm(`Are you sure you want to delete Day ${dayToRemove}? All sessions from this day will be permanently removed.`)) {
+                                deleteDay(dayToRemove);
+                            }
+                        });
+                    }
+                    
+                    // Add session cards
+                    daySessions.forEach(session => {
+                        const sessionCard = document.createElement('div');
+                        sessionCard.className = session.isBreak ? 'session-card break-session' : 'session-card';
+                        sessionCard.draggable = true;
+                        sessionCard.dataset.id = session.id;
+                        
+                        const minutesText = session.duration === 1 ? 'minute' : 'minutes';
+                        
+                        sessionCard.innerHTML = `
+                            <h3>
+                                ${session.title}
+                                <span class="time-badge">${session.duration} ${minutesText}</span>
+                            </h3>
+                            <p>${session.description || '(No description provided)'}</p>
+                            <div class="card-controls">
+                                <div class="checkbox-group" style="margin-right: auto;">
+                                    <input type="checkbox" id="canvas-reusable-${session.id}" class="make-reusable" 
+                                        data-id="${session.id}" ${reusableSessions.has(session.id) ? 'checked' : ''}>
+                                    <label for="canvas-reusable-${session.id}" style="font-size: 12px;">Make reusable</label>
+                                </div>
+                                <button class="edit-btn">Edit</button>
+                                <button class="duplicate-btn">Copy</button>
+                                <button class="delete-btn">Delete</button>
+                            </div>
+                        `;
+						// Add checkbox event listener for making session reusable
+						const reusableCheckbox = sessionCard.querySelector('.make-reusable');
+						reusableCheckbox.addEventListener('change', function(e) {
+							e.stopPropagation(); // Prevent event bubbling
+							toggleReusableSession(session.id, this.checked);
+							renderCanvasTemplates(); // Update canvas templates immediately
+						});
+                        
+                        // Add drag and drop event listeners
+                        sessionCard.addEventListener('dragstart', function(e) {
+                            setTimeout(() => {
+                                this.classList.add('dragging');
+                            }, 0);
+                            canvasDraggedSession = session;
+                            
+                            // Create ghost image for dragging
+                            const ghost = this.cloneNode(true);
+                            ghost.style.position = 'absolute';
+                            ghost.style.top = '-1000px';
+                            document.body.appendChild(ghost);
+                            e.dataTransfer.setDragImage(ghost, 0, 0);
+                            
+                            // Clean up ghost after drag
+                            setTimeout(() => {
+                                document.body.removeChild(ghost);
+                            }, 0);
+                        });
+                        
+                        sessionCard.addEventListener('dragend', function() {
+                            this.classList.remove('dragging');
+                            canvasDraggedSession = null;
+                        });
+                        
+                        // Add button event listeners
+                        const editBtn = sessionCard.querySelector('.edit-btn');
+                        const duplicateBtn = sessionCard.querySelector('.duplicate-btn');
+                        const deleteBtn = sessionCard.querySelector('.delete-btn');
+                        
+                        editBtn.addEventListener('click', function() {
+                            // Switch to main view and edit the session
+                            toggleCanvasView();
+                            editSession(session.id);
+                        });
+                        
+                        duplicateBtn.addEventListener('click', function() {
+                            duplicateSession(session.id);
+                        });
+                        
+                        deleteBtn.addEventListener('click', function() {
+                            deleteSession(session.id);
+                            renderCanvasView();
+                        });
+                        
+                        dayColumn.appendChild(sessionCard);
+                    });
+                    
+                    // Add drag and drop for the day column
+                    dayColumn.addEventListener('dragover', function(e) {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = canvasDraggedTemplate ? 'copy' : 'move';
+                        
+                        // Get position for inserting dragged element
+                        const afterElement = getCanvasDragAfterElement(this, e.clientY);
+                        const draggable = document.querySelector('.session-card.dragging');
+                        
+                        // Only if we have a session being dragged (not a template)
+                        if (draggable) {
+                            if (afterElement) {
+                                this.insertBefore(draggable, afterElement);
+                            } else {
+                                this.appendChild(draggable);
+                            }
+                        }
+                    });
+                    
+                    dayColumn.addEventListener('drop', function(e) {
+                        e.preventDefault();
+                        
+                        const targetDay = day; // Current day column
+                        
+                        if (canvasDraggedTemplate) {
+                            // Create a new session from template
+                            const newSession = addSessionFromTemplate(canvasDraggedTemplate, targetDay);
+                            renderCanvasView();
+                        } else if (canvasDraggedSession) {
+                            // Move an existing session to this day
+                            if (canvasDraggedSession.day !== targetDay) {
+                                // Update the day
+                                canvasDraggedSession.day = targetDay;
+                                
+                                // Re-render everything
+                                initDayTabs();
+                                renderAgenda();
+                                renderCanvasView();
+                                saveToLocalStorage();
+                            } else {
+                                // Same day, just reorder
+                                reorderCanvasSessionsBasedOnDOM(targetDay);
+                                saveToLocalStorage();
+                            }
+                        }
+                    });
+                    
+                    canvas.appendChild(dayColumn);
+                }
+                
+                // Update the canvas day selector
+                updateDaySelectors();
+            }
+            
+            // Helper function to get drag position in canvas
+            function getCanvasDragAfterElement(container, y) {
+                const draggableElements = [...container.querySelectorAll('.session-card:not(.dragging)')];
+                
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = y - box.top - box.height / 2;
+                    
+                    if (offset < 0 && offset > closest.offset) {
+                        return { offset: offset, element: child };
+                    } else {
+                        return closest;
+                    }
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+            }
+            
+            // Reorder sessions for a specific day based on DOM order in canvas
+            function reorderCanvasSessionsBasedOnDOM(day) {
+                // Find the correct day column
+                const dayColumns = document.querySelectorAll('.day-column');
+                const dayColumn = dayColumns[day - 1];
+                
+                if (!dayColumn) return;
+                
+                // Get all session cards in order
+                const sessionCards = dayColumn.querySelectorAll('.session-card');
+                
+                // Create a new array for the reordered sessions
+                const newDayOrder = [];
+                
+                // Add sessions in the new order
+                sessionCards.forEach(card => {
+                    const sessionId = card.dataset.id;
+                    const session = sessions.find(s => s.id === sessionId);
+                    
+                    if (session) {
+                        newDayOrder.push(session);
+                    }
+                });
+                
+                // Keep sessions from other days
+                const otherDaySessions = sessions.filter(s => s.day !== day);
+                
+                // Combine with reordered day sessions
+                sessions = [...otherDaySessions, ...newDayOrder];
+            }
+            
+            // Load saved data and initialize
+            if (localStorage.getItem('workshopData')) {
+                try {
+                    const workshopData = JSON.parse(localStorage.getItem('workshopData'));
+                    sessions = workshopData.sessions || [];
+                    
+                    // Handle different formats of reusable sessions
+                    if (workshopData.reusableSessions) {
+                        if (Array.isArray(workshopData.reusableSessions)) {
+                            // New format with reusableSessions array
+                            reusableSessions = new Set(workshopData.reusableSessions);
+                        } else if (typeof workshopData.reusableSessions === 'object') {
+                            // Old format with templates array
+                            reusableSessions = new Set();
+                            // Convert linked session IDs to reusable
+                            Object.values(workshopData.reusableSessions).forEach(id => {
+                                if (sessions.some(s => s.id === id)) {
+                                    reusableSessions.add(id);
+                                }
+                            });
+                        }
+                    } else if (workshopData.templates && Array.isArray(workshopData.templates)) {
+                        // Old format with templates array
+                        reusableSessions = new Set();
+                        // Convert linked session IDs to reusable
+                        workshopData.templates.forEach(template => {
+                            if (template.linkedSessionId && 
+                                sessions.some(s => s.id === template.linkedSessionId)) {
+                                reusableSessions.add(template.linkedSessionId);
+                            }
+                        });
+                    } else {
+                        reusableSessions = new Set();
+                    }
+                    
+                    // Load other workshop data
+                    workshopTitle = workshopData.title || "New Workshop";
+                    clientName = workshopData.client || "";
+                    location = workshopData.location || "";
+                    workshopDate = workshopData.date || "";
+                    learningOutcomes = workshopData.learningOutcomes || "";
+                    workshopOutputs = workshopData.outputs || "";
+                    includeDetails = workshopData.includeDetails !== undefined ? 
+                                  workshopData.includeDetails : true;
+                    includeCanvas = workshopData.includeCanvas !== undefined ?
+                                 workshopData.includeCanvas : true;
+                    
+                    // Load multi-day workshop data
+                    totalDays = workshopData.totalDays || 1;
+                    currentDay = workshopData.currentDay || 1;
+                    
+                    // Ensure all sessions have a day property
+                    sessions.forEach(session => {
+                        if (!session.day) {
+                            session.day = 1; // Default to day 1 for older data
+                        }
+                    });
+                    
+                    // Update UI
+                    workshopTitleInput.value = workshopTitle;
+                    clientNameInput.value = clientName;
+                    locationInput.value = location;
+                    workshopDateInput.value = workshopDate;
+                    learningOutcomesInput.value = learningOutcomes;
+                    workshopOutputsInput.value = workshopOutputs;
+                    includeDetailsCheckbox.checked = includeDetails;
+                    includeCanvasCheckbox.checked = includeCanvas;
+                    canvasTitleElement.textContent = workshopTitle + " - Canvas View";
+                    
+                    updateDateTbcVisibility();
+                    initDayTabs();
+                    renderAgenda();
+                    renderTemplates();
+                    renderCanvasTemplates();
+                } catch (e) {
+                    console.error('Error loading saved workshop data:', e);
+                    initDayTabs(); // Initialize with default single day
+                    updateDaySelectors();
+                    renderCanvasTemplates();
+                }
+            } else {
+                initDayTabs(); // Initialize with default single day
+                updateDaySelectors();
+                renderCanvasTemplates();
+            }
+            
+            // Enhance PDF export to include canvas if selected
+            exportPdfButton.addEventListener('click', function() {
+                // PDF Export using jsPDF
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Add document properties
+                doc.setProperties({
+                    title: `${workshopTitle} - Agenda`,
+                    subject: 'Workshop Agenda',
+                    author: 'Agenda Builder',
+                    keywords: 'workshop, agenda, schedule',
+                    creator: 'Agenda Builder'
+                });
+                
+                // Check if the logo is loaded and convert it to a data URL
+                let logoDataUrl = null;
+                if (companyLogo.complete && companyLogo.naturalWidth > 0) {
+                    try {
+                        logoDataUrl = imageToDataURL(companyLogo);
+                    } catch (e) {
+                        console.warn("Could not convert logo to data URL:", e);
+                    }
+                }
+                
+                // If we have a logo, add it to the PDF
+                let yPosition = 15; // Start slightly higher
+                if (logoDataUrl) {
+                    const logoWidth = 35; // Slightly smaller logo
+                    const logoHeight = (companyLogo.naturalHeight / companyLogo.naturalWidth) * logoWidth;
+                    doc.addImage(logoDataUrl, 'PNG', 14, yPosition, logoWidth, logoHeight);
+                    yPosition += logoHeight + 8; // Reduced spacing after logo
+                } else {
+                    yPosition = 25; // Default starting position if no logo
+                }
+                
+                // Title - keep at normal size
+                doc.setFontSize(18); // Slightly smaller title
+                doc.text(workshopTitle, 14, yPosition);
+                yPosition += 8; // Reduced spacing
+                
+                // Use smaller font for all header info
+                doc.setFontSize(10); // Smaller text for header info
+                
+                // Workshop Date
+                if (workshopDate) {
+                    doc.text(`Date: ${formatDate(workshopDate)}`, 14, yPosition);
+                } else {
+                    doc.text(`Date: TBC`, 14, yPosition);
+                }
+                yPosition += 6; // Reduced spacing
+                
+                // Client and Location
+                if (clientName) {
+                    doc.text(`Client: ${clientName}`, 14, yPosition);
+                    yPosition += 6; // Reduced spacing
+                }
+                if (location) {
+                    doc.text(`Location: ${location}`, 14, yPosition);
+                    yPosition += 6; // Reduced spacing
+                }
+                
+                // Generated date info
+                const today = new Date();
+                const generatedDateStr = formatDate(today);
+                doc.text(`Generated: ${generatedDateStr}`, 14, yPosition);
+                yPosition += 6; // Reduced spacing
+                
+                // Count non-break sessions
+                const actualSessionCount = sessions.filter(session => !session.isBreak).length;
+                
+                // Summary
+                doc.text(`Total Days: ${totalDays}`, 14, yPosition);
+                yPosition += 6; // Reduced spacing
+                doc.text(`Total Sessions: ${actualSessionCount}`, 14, yPosition);
+                yPosition += 6; // Reduced spacing
+                const totalDuration = sessions.reduce((total, session) => total + session.duration, 0);
+                doc.text(`Total Duration: ${formatDuration(totalDuration)}`, 14, yPosition);
+                yPosition += 10; // Slightly more spacing before content sections
+                
+                // Learning Outcomes and Outputs - less spacing between them
+                if (includeDetails && (learningOutcomes || workshopOutputs)) {
+                    if (learningOutcomes) {
+                        doc.setFontSize(11); // Slightly larger than header info but still compact
+                        doc.text("Learning Outcomes:", 14, yPosition);
+                        yPosition += 6;
+                        doc.setFontSize(10);
+                        // Split learning outcomes into lines to avoid overflow
+                        const splitOutcomes = doc.splitTextToSize(learningOutcomes, 180);
+                        doc.text(splitOutcomes, 14, yPosition);
+                        yPosition += (splitOutcomes.length * 5) + 5; // Reduced spacing after outcomes
+                    }
+                    
+                    if (workshopOutputs) {
+                        doc.setFontSize(11);
+                        doc.text("Workshop Outputs:", 14, yPosition);
+                        yPosition += 6;
+                        doc.setFontSize(10);
+                        // Split outputs into lines to avoid overflow
+                        const splitOutputs = doc.splitTextToSize(workshopOutputs, 180);
+                        doc.text(splitOutputs, 14, yPosition);
+                        yPosition += (splitOutputs.length * 5) + 8; // Slightly more spacing after outputs
+                    }
+                }
+                
+                // Reset font size for agenda content
+                doc.setFontSize(12); // Normal size for agenda content
+                
+                // For each day, add a day header and table
+                for (let day = 1; day <= totalDays; day++) {
+                    const daySessions = sessions.filter(s => s.day === day);
+                    
+                    if (daySessions.length === 0) continue; // Skip days with no sessions
+                    
+                    // Add a page break if we're not on the first day and there's not enough space
+                    if (day > 1 && yPosition > 200) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    
+                    // Day header
+                    doc.setFontSize(14);
+                    doc.text(`Day ${day}`, 14, yPosition);
+                    yPosition += 8;
+                    
+                    // Day stats
+                    doc.setFontSize(11);
+                    const daySessionsCount = daySessions.filter(s => !s.isBreak).length;
+                    const dayDuration = daySessions.reduce((total, s) => total + s.duration, 0);
+                    doc.text(`Sessions: ${daySessionsCount} | Duration: ${formatDuration(dayDuration)}`, 14, yPosition);
+                    yPosition += 8;
+                    
+                    // Table data for this day
+                    const tableData = daySessions.map((session, index) => [
+                        session.isBreak ? 'BREAK' : (index + 1 - daySessions.filter((s, i) => s.isBreak && i < index).length),
+                        session.title,
+                        session.description || "(No description)",
+                        `${session.duration} min`
+                    ]);
+                    
+                    // Add table for this day
+                    if (tableData.length > 0) {
+                        doc.autoTable({
+                            startY: yPosition,
+                            head: [['#', 'Session Title', 'Description', 'Duration']],
+                            body: tableData,
+                            headStyles: { fillColor: [52, 152, 219] },
+                            bodyStyles: { },
+                            // Style break rows differently
+                            rowStyles: daySessions.map(session => 
+                                session.isBreak ? { fillColor: [254, 249, 231] } : {}
+                            )
+                        });
+                        
+                        // Update yPosition for the next day
+                        yPosition = doc.lastAutoTable.finalY + 20;
+                    }
+                }
+                
+                // Include canvas view if option is checked
+                if (includeCanvas) {
+                    // Add a new page for the canvas view
+                    doc.addPage();
+                    
+                    doc.setFontSize(16);
+                    doc.text(`${workshopTitle} - Canvas View`, 14, 20);
+                    
+                    doc.setFontSize(10);
+                    doc.text("Note: This is a simplified canvas representation. The interactive canvas view provides a more detailed visualization.", 14, 30);
+                    
+                    // Create a simple representation of the canvas
+                    let canvasY = 45;
+                    
+                    for (let day = 1; day <= totalDays; day++) {
+                        const daySessions = sessions.filter(s => s.day === day);
+                        
+                        if (daySessions.length === 0) continue;
+                        
+                        // Add page break if needed
+                        if (canvasY > 250 && day < totalDays) {
+                            doc.addPage();
+                            canvasY = 20;
+                        }
+                        
+                        // Draw day header
+                        doc.setFillColor(52, 152, 219);
+                        doc.rect(14, canvasY, 180, 10, 'F');
+                        doc.setTextColor(255, 255, 255);
+                        doc.setFontSize(12);
+                        doc.text(`Day ${day}`, 18, canvasY + 7);
+                        
+                        // Reset text color
+                        doc.setTextColor(0, 0, 0);
+                        canvasY += 15;
+                        
+                        // Draw session blocks
+                        daySessions.forEach(session => {
+                            // Check if we need a new page
+                            if (canvasY > 270) {
+                                doc.addPage();
+                                canvasY = 20;
+                            }
+                            
+                            const blockHeight = 10;
+                            
+                            // Draw session block
+                            if (session.isBreak) {
+                                doc.setFillColor(254, 249, 231);
+                            } else {
+                                doc.setFillColor(240, 240, 240);
+                            }
+                            
+                            doc.rect(18, canvasY, 172, blockHeight, 'F');
+                            
+                            // Draw session title
+                            doc.setFontSize(9);
+                            doc.text(`${session.title} (${session.duration} min)`, 22, canvasY + 7);
+                            
+                            canvasY += blockHeight + 3;
+                        });
+                        
+                        canvasY += 15; // Add spacing between days
+                    }
+                }
+                
+                // Save the PDF
+                doc.save(`${workshopTitle.replace(/\s+/g, '-')}-agenda.pdf`);
+            });
+            
+            // Function to convert an image to data URL
+            function imageToDataURL(img) {
+                // Create a canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                
+                // Draw the image on the canvas
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                try {
+                    // Convert canvas to data URL
+                    return canvas.toDataURL('image/png');
+                } catch (e) {
+                    console.warn('Could not convert image to data URL:', e);
+                    return null;
+                }
+            }
+            
+            // Export as Excel (XLS format using HTML table)
+            exportExcelButton.addEventListener('click', function() {
+                // First, check if the user wants to proceed with the Excel export
+                const message = "Excel files created by web applications may trigger a security warning when opened. " +
+                               "You'll need to click 'Yes' once to open the file. Continue with export?";
+                
+                if (confirm(message)) {
+                    // Create an HTML table that Excel can open properly
+                    let excelHtml = `
+                    <!DOCTYPE html>
+                    <html xmlns:o="urn:schemas-microsoft-com:office:office"
+                          xmlns:x="urn:schemas-microsoft-com:office:excel"
+                          xmlns="http://www.w3.org/TR/REC-html40">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+                        <title>${workshopTitle}</title>
+                        <style>
+                            table { border-collapse: collapse; width: 100%; }
+                            th, td { border: 1px solid #ddd; padding: 8px; }
+                            th { background-color: #f2f2f2; }
+                            .header { font-weight: bold; }
+                            .break-row { background-color: #fef9e7; }
+                            .day-header { 
+                                background-color: #34495e; 
+                                color: white; 
+                                font-weight: bold;
+                                font-size: 14pt;
+                            }
+                            .day-stats {
+                                background-color: #eaf2f8;
+                                font-style: italic;
+                            }
+                        </style>
+                        <!-- Excel Column Autofit Script -->
+                        <meta name="ProgId" content="Excel.Sheet">
+                        <meta name="Generator" content="Microsoft Excel">
+                        <!--[if gte mso 9]>
+                        <xml>
+                            <x:ExcelWorkbook>
+                                <x:ExcelWorksheets>
+                                    <x:ExcelWorksheet>
+                                        <x:Name>Workshop Agenda</x:Name>
+                                        <x:WorksheetOptions>
+                                            <x:DisplayGridlines/>
+                                            <x:FitToPage/>
+                                        </x:WorksheetOptions>
+                                    </x:ExcelWorksheet>
+                                </x:ExcelWorksheets>
+                            </x:ExcelWorkbook>
+                        </xml>
+                        <![endif]-->
+                    </head>
+                    <body>
+                        <table>
+                            <tr><td class="header">Workshop</td><td colspan="3">${escapeHtml(workshopTitle)}</td></tr>
+                    `;
+                    
+                    if (clientName) {
+                        excelHtml += `<tr><td class="header">Client</td><td colspan="3">${escapeHtml(clientName)}</td></tr>`;
+                    }
+                    
+                    if (location) {
+                        excelHtml += `<tr><td class="header">Location</td><td colspan="3">${escapeHtml(location)}</td></tr>`;
+                    }
+                    
+                    // Workshop date
+                    excelHtml += `<tr><td class="header">Workshop Date</td><td colspan="3">${workshopDate ? formatDate(workshopDate) : 'TBC'}</td></tr>`;
+                    
+                    // Count actual sessions (non-breaks)
+                    const actualSessionCount = sessions.filter(session => !session.isBreak).length;
+                    
+                    excelHtml += `
+                        <tr><td class="header">Generated</td><td colspan="3">${formatDate(new Date())}</td></tr>
+                        <tr><td class="header">Total Days</td><td colspan="3">${totalDays}</td></tr>
+                        <tr><td class="header">Total Sessions</td><td colspan="3">${actualSessionCount}</td></tr>
+                        <tr><td class="header">Total Duration</td><td colspan="3">${formatDuration(sessions.reduce((total, session) => total + session.duration, 0))}</td></tr>
+                    `;
+                    
+                    // Add Learning Outcomes and Outputs
+                    if (includeDetails && (learningOutcomes || workshopOutputs)) {
+                        if (learningOutcomes) {
+                            excelHtml += `<tr><td class="header">Learning Outcomes</td><td colspan="3">${escapeHtml(learningOutcomes)}</td></tr>`;
+                        }
+                        
+                        if (workshopOutputs) {
+                            excelHtml += `<tr><td class="header">Workshop Outputs</td><td colspan="3">${escapeHtml(workshopOutputs)}</td></tr>`;
+                        }
+                    }
+                    
+                    // Empty row as separator
+                    excelHtml += `<tr><td colspan="4"></td></tr>`;
+                    
+                    // For each day, add sessions
+                    for (let day = 1; day <= totalDays; day++) {
+                        const daySessions = sessions.filter(s => s.day === day);
+                        
+                        if (daySessions.length === 0) continue; // Skip days with no sessions
+                        
+                        // Day header
+                        excelHtml += `<tr><td colspan="4" class="day-header">Day ${day}</td></tr>`;
+                        
+                        // Day stats
+                        const daySessionsCount = daySessions.filter(s => !s.isBreak).length;
+                        const dayDuration = daySessions.reduce((total, s) => total + s.duration, 0);
+                        excelHtml += `<tr><td colspan="4" class="day-stats">Sessions: ${daySessionsCount} | Duration: ${formatDuration(dayDuration)}</td></tr>`;
+                        
+                        // Column headers
+                        excelHtml += `
+                            <tr>
+                                <th>Number</th>
+                                <th>Title</th>
+                                <th>Description</th>
+                                <th>Duration (minutes)</th>
+                            </tr>
+                        `;
+                        
+                        // Add sessions for this day
+                        let sessionNum = 1;
+                        daySessions.forEach((session) => {
+                            // Display breaks with different styling
+                            const rowClass = session.isBreak ? ' class="break-row"' : '';
+                            
+                            // Only increment row number for non-break sessions
+                            const displayNum = session.isBreak ? 'BREAK' : sessionNum;
+                            
+                            if (!session.isBreak) {
+                                sessionNum++;
+                            }
+                            
+                            excelHtml += `
+                                <tr${rowClass}>
+                                    <td>${displayNum}</td>
+                                    <td>${escapeHtml(session.title)}</td>
+                                    <td>${escapeHtml(session.description || '')}</td>
+                                    <td>${session.duration}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        // Empty row as separator between days
+                        excelHtml += `<tr><td colspan="4"></td></tr>`;
+                    }
+                    
+                    excelHtml += `
+                        </table>
+                    </body>
+                    </html>
+                    `;
+                    
+                    // Helper function to escape HTML special characters
+                    function escapeHtml(text) {
+                        if (!text) return '';
+                        return text
+                            .replace(/&/g, "&amp;")
+                            .replace(/</g, "&lt;")
+                            .replace(/>/g, "&gt;")
+                            .replace(/"/g, "&quot;")
+                            .replace(/'/g, "&#039;");
+                    }
+                    
+                    // Create download as .xls file (Excel 97-2003 format)
+                    const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${workshopTitle.replace(/\s+/g, '-')}-agenda.xls`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
